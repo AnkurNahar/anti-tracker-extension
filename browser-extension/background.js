@@ -1,5 +1,5 @@
 // Background script for LLM Anti-Tracker
-const API_ENDPOINT = "http://localhost:5000/predict";
+const API_ENDPOINT = "http://localhost:6000/predict";
 const CACHE_DURATION = 3600000; // Cache results for 1 hour (in ms)
 
 // Simple cache to avoid repeated API calls
