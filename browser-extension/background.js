@@ -1,5 +1,5 @@
 // Background script for LLM Anti-Tracker
-const API_ENDPOINT = "http://localhost:6000/predict";
+const API_ENDPOINT = "http://127.0.0.1:6000/predict";
 const CACHE_DURATION = 3600000; // Cache results for 1 hour (in ms)
 
 // Simple cache to avoid repeated API calls
@@ -23,31 +23,35 @@ chrome.storage.local.get('stats', (data) => {
 });
 
 // Check URLs and update data
-async function checkUrl(url, tabId) {
-  // Check cache first
-  const now = Date.now();
-  if (urlCache.has(url)) {
-    const {result, timestamp} = urlCache.get(url);
-    if (now - timestamp < CACHE_DURATION) {
-      console.log(`[Cache] ${url.substring(0, 50)}...: ${result.is_tracker ? "BLOCKED" : "ALLOWED"}`);
-      updateTabData(tabId, url, result);
-      return result;
-    }
-  }
-  
+const checkUrl = async(url, tabId) => {
   try {
+    console.log("url, tab-id: ", API_ENDPOINT,url, tabId);
+    
+    // Check cache first
+    const now = Date.now();
+    if (urlCache.has(url)) {
+      const {result, timestamp} = urlCache.get(url);
+      if (now - timestamp < CACHE_DURATION) {
+        console.log(`[Cache] ${url.substring(0, 50)}...: ${result.is_tracker ? "BLOCKED" : "ALLOWED"}`);
+        updateTabData(tabId, url, result);
+        return result;
+      }
+    }
+  
     // Call the API
     const response = await fetch(API_ENDPOINT, {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({url: url})
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
+    }).catch((error) => {
+      console.error("Fetch error: ", error.message);
     });
     
     
     if (!response.ok) throw new Error("API error");
     
     
-    const result = await response.json();
+    result = response.json();
     
     // Cache the result
     urlCache.set(url, {result, timestamp: now});
@@ -71,7 +75,7 @@ async function checkUrl(url, tabId) {
     console.log(`[API] ${url.substring(0, 50)}...: ${result.is_tracker ? "BLOCKED" : "ALLOWED"} (${result.confidence.toFixed(2)})`);
     return result;
   } catch (error) {
-    console.error("Error checking URL:", error);
+    console.error("Error checking URL: ", error);
     return {is_tracker: false, confidence: 0};
   }
 }
@@ -100,6 +104,8 @@ chrome.webRequest.onBeforeRequest.addListener(
   async function(details) {
     // Only process if we have a tab ID (main frame or sub-resource)
     if (details.tabId !== -1) {
+      console.log("chrome.webRequest.onBeforeRequest.addListener: ", details.url, details.tabId);
+      
       const result = await checkUrl(details.url, details.tabId);
       
       // If it's a tracker, add to the tab's tracker list

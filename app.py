@@ -5,7 +5,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS to allow browser requests
+CORS(app, resources={r"/*": {"origins": "*"}})  # Enable CORS to allow browser requests
 
 
 # Device selection
